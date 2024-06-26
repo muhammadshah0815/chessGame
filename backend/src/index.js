@@ -14,10 +14,7 @@ setupWebSocket(wss);
 app.use(express.json());
 
 const mongoUri = process.env.MONGO_URI;
-mongoose.connect(mongoUri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected'))
+mongoose.connect(mongoUri).then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
 app.use('/api/users', require('./routes/userRoutes'));
