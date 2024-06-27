@@ -20,12 +20,32 @@ const pieceImages = {
 const ChessBoard = () => {
   const [board, setBoard] = useState(initialBoardSetup);
   const [selectedPiece, setSelectedPiece] = useState(null);
-  const [turn, setTurn] = useState('white'); // Track whose turn it is
+  const [turn, setTurn] = useState('white');
   const [highlightedMoves, setHighlightedMoves] = useState([]);
-  const [enPassant, setEnPassant] = useState(null); // Track en passant opportunities
+  const [enPassant, setEnPassant] = useState(null);
   const [whiteTaken, setWhiteTaken] = useState([]);
   const [blackTaken, setBlackTaken] = useState([]);
-  const [winner, setWinner] = useState(null); // Track the winner
+  const [winner, setWinner] = useState(null);
+  const [kingMoved, setKingMoved] = useState({ white: false, black: false });
+  const [rookMoved, setRookMoved] = useState({
+    white: { queenside: false, kingside: false },
+    black: { queenside: false, kingside: false }
+  });
+
+  const isPathBlocked = (startRow, startCol, endRow, endCol, boardState) => {
+    const dx = endCol > startCol ? 1 : endCol < startCol ? -1 : 0;
+    const dy = endRow > startRow ? 1 : endRow < startRow ? -1 : 0;
+    let x = startCol + dx;
+    let y = startRow + dy;
+
+    while (x !== endCol || y !== endRow) {
+      if (boardState[y][x] !== '') return true;
+      x += dx;
+      y += dy;
+    }
+
+    return false;
+  };
 
   const isValidMove = (piece, startRow, startCol, endRow, endCol, boardState) => {
     const dx = Math.abs(endCol - startCol);
@@ -66,38 +86,60 @@ const ChessBoard = () => {
       case 'q': // Queen
         return (dx === 0 || Math.abs(dy) === 0 || dx === Math.abs(dy)) && !isPathBlocked(startRow, startCol, endRow, endCol, boardState);
       case 'k': // King
-        return dx <= 1 && Math.abs(dy) <= 1;
+        if (dx <= 1 && Math.abs(dy) <= 1) return true; // Normal king move
+
+        // Castling
+        if (dx === 2 && dy === 0 && !kingMoved[turn]) {
+          const kingside = endCol > startCol;
+          const rookCol = kingside ? 7 : 0;
+          const rookDest = kingside ? 5 : 3;
+          const isPathClear = !isPathBlocked(startRow, startCol, startRow, rookCol, boardState);
+          const canCastle = isPathClear && !isSquareAttacked(boardState, startRow, startCol, turn) && !isSquareAttacked(boardState, startRow, startCol + 1, turn) && !isSquareAttacked(boardState, startRow, endCol, turn);
+          return canCastle;
+        }
+        break;
       default:
         return false;
     }
   };
 
-  const isPathBlocked = (startRow, startCol, endRow, endCol, boardState) => {
-    const dx = endCol > startCol ? 1 : endCol < startCol ? -1 : 0;
-    const dy = endRow > startRow ? 1 : endRow < startRow ? -1 : 0;
-    let x = startCol + dx;
-    let y = startRow + dy;
-
-    while (x !== endCol || y !== endRow) {
-      if (boardState[y][x] !== '') return true;
-      x += dx;
-      y += dy;
+  const isSquareAttacked = (boardState, row, col, attackerColor) => {
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const piece = boardState[r][c];
+        if (piece && ((attackerColor === 'white' && piece.toUpperCase() === piece) || (attackerColor === 'black' && piece.toLowerCase() === piece))) {
+          if (isValidMove(piece, r, c, row, col, boardState)) {
+            return true;
+          }
+        }
+      }
     }
-
     return false;
   };
 
-  const findKing = (tempBoard, king) => {
+  const findKing = (boardState, king) => {
     for (let row = 0; row < 8; row++) {
       for (let col = 0; col < 8; col++) {
-        if (tempBoard[row][col] === king) {
+        if (boardState[row][col] === king) {
           return { row, col };
         }
       }
     }
     return null;
   };
-  
+
+  const moveResultsInCheck = (startRow, startCol, endRow, endCol) => {
+    const tempBoard = board.map((r) => r.slice());
+    const piece = tempBoard[startRow][startCol];
+    tempBoard[startRow][startCol] = '';
+    tempBoard[endRow][endCol] = piece;
+
+    const kingPosition = findKing(tempBoard, turn === 'white' ? 'K' : 'k');
+    if (!kingPosition) {
+      return false; // If no king is found, cannot be in check (error case, handled by findKing)
+    }
+    return isSquareAttacked(tempBoard, kingPosition.row, kingPosition.col, turn === 'white' ? 'black' : 'white');
+  };
 
   const getPossibleMoves = (piece, startRow, startCol) => {
     const moves = [];
@@ -108,35 +150,45 @@ const ChessBoard = () => {
         }
       }
     }
-    return moves;
-  };
 
-  const moveResultsInCheck = (startRow, startCol, endRow, endCol) => {
-    const tempBoard = board.map((r) => r.slice());
-    const piece = tempBoard[startRow][startCol];
-    tempBoard[startRow][startCol] = '';
-    tempBoard[endRow][endCol] = piece;
-  
-    const kingPosition = findKing(tempBoard, turn === 'white' ? 'K' : 'k');
-    if (!kingPosition) {
-      return false; // If no king is found, cannot be in check (error case, handled by findKing)
-    }
-    return isSquareAttacked(tempBoard, kingPosition.row, kingPosition.col, turn === 'white' ? 'black' : 'white');
-  };
-  
-
-  const isSquareAttacked = (tempBoard, row, col, attackerColor) => {
-    for (let r = 0; r < 8; r++) {
-      for (let c = 0; c < 8; c++) {
-        const piece = tempBoard[r][c];
-        if (piece && ((attackerColor === 'white' && piece.toUpperCase() === piece) || (attackerColor === 'black' && piece.toLowerCase() === piece))) {
-          if (isValidMove(piece, r, c, row, col, tempBoard)) {
-            return true;
-          }
+    // Add castling moves if the piece is a king and hasn't moved
+    if (piece.toLowerCase() === 'k' && !kingMoved[turn]) {
+      // Kingside castling
+      if (!rookMoved[turn].kingside && !isPathBlocked(startRow, startCol, startRow, 7, board)) {
+        if (!isSquareAttacked(board, startRow, startCol, turn) && !isSquareAttacked(board, startRow, startCol + 1, turn) && !isSquareAttacked(board, startRow, startCol + 2, turn)) {
+          moves.push({ row: startRow, col: startCol + 2 });
+        }
+      }
+      // Queenside castling
+      if (!rookMoved[turn].queenside && !isPathBlocked(startRow, startCol, startRow, 0, board)) {
+        if (!isSquareAttacked(board, startRow, startCol, turn) && !isSquareAttacked(board, startRow, startCol - 1, turn) && !isSquareAttacked(board, startRow, startCol - 2, turn)) {
+          moves.push({ row: startRow, col: startCol - 2 });
         }
       }
     }
-    return false;
+
+    return moves;
+  };
+
+  const isCheckmate = (color, boardState) => {
+    const kingPosition = findKing(boardState, color === 'white' ? 'K' : 'k');
+    if (!kingPosition) return false;
+
+    const moves = getAllPossibleMoves(color, boardState);
+    return moves.length === 0 && isSquareAttacked(boardState, kingPosition.row, kingPosition.col, color === 'white' ? 'black' : 'white');
+  };
+
+  const getAllPossibleMoves = (color, boardState) => {
+    const moves = [];
+    for (let row = 0; row < 8; row++) {
+      for (let col = 0; col < 8; col++) {
+        const piece = boardState[row][col];
+        if (piece && ((color === 'white' && piece.toUpperCase() === piece) || (color === 'black' && piece.toLowerCase() === piece))) {
+          moves.push(...getPossibleMoves(piece, row, col));
+        }
+      }
+    }
+    return moves;
   };
 
   const handleSquareClick = (row, col) => {
@@ -145,7 +197,20 @@ const ChessBoard = () => {
       if (isValidMove(piece, startRow, startCol, row, col, board) && !moveResultsInCheck(startRow, startCol, row, col)) {
         const newBoard = board.map((r) => r.slice());
         newBoard[startRow][startCol] = '';
-        
+
+        // Handle castling move specifics
+        if (piece.toLowerCase() === 'k' && Math.abs(startCol - col) === 2) {
+          const kingside = col > startCol;
+          const rookStartCol = kingside ? 7 : 0;
+          const rookEndCol = kingside ? 5 : 3;
+          newBoard[startRow][rookEndCol] = newBoard[startRow][rookStartCol];
+          newBoard[startRow][rookStartCol] = '';
+          setRookMoved({
+            ...rookMoved,
+            [turn]: { ...rookMoved[turn], [kingside ? 'kingside' : 'queenside']: true }
+          });
+        }
+
         // Track taken pieces
         if (board[row][col]) {
           if (turn === 'white') {
@@ -156,10 +221,8 @@ const ChessBoard = () => {
         }
 
         // Auto-queen for pawns
-        if (piece === 'P' && row === 0) {
-          newBoard[row][col] = 'Q'; // Auto-queen for white pawn
-        } else if (piece === 'p' && row === 7) {
-          newBoard[row][col] = 'q'; // Auto-queen for black pawn
+        if (piece.toLowerCase() === 'p' && (row === 0 || row === 7)) {
+          newBoard[row][col] = turn === 'white' ? 'Q' : 'q'; // Auto-queen
         } else {
           newBoard[row][col] = piece;
         }
@@ -182,6 +245,7 @@ const ChessBoard = () => {
         }
 
         setBoard(newBoard);
+        setKingMoved({ ...kingMoved, [turn]: true });
 
         // Check if the move results in checkmate
         const opponent = turn === 'white' ? 'black' : 'white';
@@ -217,27 +281,6 @@ const ChessBoard = () => {
   const handleDrop = (e, row, col) => {
     e.preventDefault();
     handleSquareClick(row, col);
-  };
-
-  const isCheckmate = (color, boardState) => {
-    const kingPosition = findKing(boardState, color === 'white' ? 'K' : 'k');
-    if (!kingPosition) return false;
-
-    const moves = getAllPossibleMoves(color, boardState);
-    return moves.length === 0 && isSquareAttacked(boardState, kingPosition.row, kingPosition.col, color === 'white' ? 'black' : 'white');
-  };
-
-  const getAllPossibleMoves = (color, boardState) => {
-    const moves = [];
-    for (let row = 0; row < 8; row++) {
-      for (let col = 0; col < 8; col++) {
-        const piece = boardState[row][col];
-        if (piece && ((color === 'white' && piece.toUpperCase() === piece) || (color === 'black' && piece.toLowerCase() === piece))) {
-          moves.push(...getPossibleMoves(piece, row, col, boardState));
-        }
-      }
-    }
-    return moves;
   };
 
   return (
