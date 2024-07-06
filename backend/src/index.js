@@ -17,9 +17,11 @@ const mongoUri = process.env.MONGO_URI;
 mongoose.connect(mongoUri).then(() => console.log('MongoDB connected'))
   .catch(err => console.log(err));
 
-app.use('/api/users', require('./routes/userRoutes'));
+  const userRoutes = require('./routes/userRoutes');
+  app.use('/api/users', userRoutes);
+  
 app.use('/api/games', require('./routes/gameRoutes'));
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
