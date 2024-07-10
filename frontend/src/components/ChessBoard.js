@@ -1,16 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ChessBoard.css';
-
-const initialBoardSetup = [
-  ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'],
-  ['p', 'p', 'p', 'p', 'p', 'p', 'p', 'p'],
-  ['', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', ''],
-  ['', '', '', '', '', '', '', ''],
-  ['P', 'P', 'P', 'P', 'P', 'P', 'P', 'P'],
-  ['R', 'N', 'B', 'Q', 'K', 'B', 'N', 'R']
-];
 
 const pieceImages = {
   'P': '/images/pw.svg', 'R': '/images/rw.svg', 'N': '/images/nw.svg', 'B': '/images/bw.svg', 'Q': '/images/qw.svg', 'K': '/images/kw.svg',
@@ -18,19 +7,53 @@ const pieceImages = {
 };
 
 const ChessBoard = () => {
-  const [board, setBoard] = useState(initialBoardSetup);
-  const [selectedPiece, setSelectedPiece] = useState(null);
+  const [board, setBoard] = useState(null);
   const [turn, setTurn] = useState('white');
+  const [selectedPiece, setSelectedPiece] = useState(null);
   const [highlightedMoves, setHighlightedMoves] = useState([]);
-  const [enPassant, setEnPassant] = useState(null);
   const [whiteTaken, setWhiteTaken] = useState([]);
   const [blackTaken, setBlackTaken] = useState([]);
   const [winner, setWinner] = useState(null);
-  const [kingMoved, setKingMoved] = useState({ white: false, black: false });
-  const [rookMoved, setRookMoved] = useState({
-    white: { queenside: false, kingside: false },
-    black: { queenside: false, kingside: false }
-  });
+  const [gameId, setGameId] = useState(null);
+
+  useEffect(() => {
+    const fetchNewGame = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/game/new');
+        const data = await response.json();
+        setBoard(data.board);
+        setTurn(data.turn);
+        setGameId(data._id);
+      } catch (error) {
+        console.error("Failed to fetch the game data:", error);
+      }
+    };
+
+    fetchNewGame();
+  }, []);
+
+  const sendMoveToBackend = async (startRow, startCol, endRow, endCol) => {
+    try {
+      const response = await fetch(`http://localhost:5001/api/game/move/${gameId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ startRow, startCol, endRow, endCol }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBoard(data.board);
+        setTurn(data.turn);
+      } else {
+        const error = await response.json();
+        alert(error.message);
+      }
+    } catch (error) {
+      console.error("Failed to send move to backend:", error);
+    }
+  };
 
   const isPathBlocked = (startRow, startCol, endRow, endCol, boardState) => {
     const dx = endCol > startCol ? 1 : endCol < startCol ? -1 : 0;
@@ -191,72 +214,14 @@ const ChessBoard = () => {
     return moves;
   };
 
-  const handleSquareClick = (row, col) => {
+  const handleSquareClick = async (row, col) => {
     if (selectedPiece && !winner) {
       const { piece, startRow, startCol } = selectedPiece;
       if (isValidMove(piece, startRow, startCol, row, col, board) && !moveResultsInCheck(startRow, startCol, row, col)) {
-        const newBoard = board.map((r) => r.slice());
-        newBoard[startRow][startCol] = '';
-
-        // Handle castling move specifics
-        if (piece.toLowerCase() === 'k' && Math.abs(startCol - col) === 2) {
-          const kingside = col > startCol;
-          const rookStartCol = kingside ? 7 : 0;
-          const rookEndCol = kingside ? 5 : 3;
-          newBoard[startRow][rookEndCol] = newBoard[startRow][rookStartCol];
-          newBoard[startRow][rookStartCol] = '';
-          setRookMoved({
-            ...rookMoved,
-            [turn]: { ...rookMoved[turn], [kingside ? 'kingside' : 'queenside']: true }
-          });
-        }
-
-        // Track taken pieces
-        if (board[row][col]) {
-          if (turn === 'white') {
-            setBlackTaken([...blackTaken, board[row][col]]);
-          } else {
-            setWhiteTaken([...whiteTaken, board[row][col]]);
-          }
-        }
-
-        // Auto-queen for pawns
-        if (piece.toLowerCase() === 'p' && (row === 0 || row === 7)) {
-          newBoard[row][col] = turn === 'white' ? 'Q' : 'q'; // Auto-queen
-        } else {
-          newBoard[row][col] = piece;
-        }
-
-        // Handle en passant capture
-        if (piece.toLowerCase() === 'p' && enPassant && enPassant.row === row && enPassant.col === col) {
-          newBoard[startRow][col] = '';
-          if (turn === 'white') {
-            setBlackTaken([...blackTaken, 'p']);
-          } else {
-            setWhiteTaken([...whiteTaken, 'P']);
-          }
-        }
-
-        // Set en passant opportunities
-        if (piece.toLowerCase() === 'p' && Math.abs(startRow - row) === 2) {
-          setEnPassant({ row: (startRow + row) / 2, col });
-        } else {
-          setEnPassant(null);
-        }
-
-        setBoard(newBoard);
-        setKingMoved({ ...kingMoved, [turn]: true });
-
-        // Check if the move results in checkmate
-        const opponent = turn === 'white' ? 'black' : 'white';
-        if (isCheckmate(opponent, newBoard)) {
-          setWinner(turn);
-        } else {
-          setTurn(turn === 'white' ? 'black' : 'white'); // Change turn
-        }
+        await sendMoveToBackend(startRow, startCol, row, col);
+        setSelectedPiece(null);
+        setHighlightedMoves([]);
       }
-      setSelectedPiece(null);
-      setHighlightedMoves([]);
     } else if (board[row][col] && ((turn === 'white' && board[row][col].toUpperCase() === board[row][col]) || (turn === 'black' && board[row][col].toLowerCase() === board[row][col]))) {
       setSelectedPiece({ piece: board[row][col], startRow: row, startCol: col });
       setHighlightedMoves(getPossibleMoves(board[row][col], row, col));
@@ -282,6 +247,10 @@ const ChessBoard = () => {
     e.preventDefault();
     handleSquareClick(row, col);
   };
+
+  if (!board) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="game-container">

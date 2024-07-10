@@ -1,27 +1,26 @@
 const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
-const http = require('http');
-const WebSocket = require('ws');
-const { setupWebSocket } = require('./config/websocket');
-require('dotenv').config();
+const gameRoutes = require('./routes/gameRoutes');
 
 const app = express();
-const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
-
-setupWebSocket(wss);
-
-app.use(express.json());
-
-const mongoUri = process.env.MONGO_URI;
-mongoose.connect(mongoUri).then(() => console.log('MongoDB connected'))
-  .catch(err => console.log(err));
-
-  const userRoutes = require('./routes/userRoutes');
-  app.use('/api/users', userRoutes);
-  
-app.use('/api/games', require('./routes/gameRoutes'));
-
 const PORT = process.env.PORT || 5001;
 
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+mongoose.connect('mongodb://localhost/chess', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true
+}).then(() => {
+  console.log('Connected to MongoDB');
+}).catch((error) => {
+  console.error('Connection error', error.message);
+});
+
+app.use(cors());
+app.use(bodyParser.json());
+
+app.use('/api/game', gameRoutes);
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});
