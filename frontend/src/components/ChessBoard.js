@@ -24,6 +24,7 @@ const ChessBoard = () => {
         setBoard(data.board);
         setTurn(data.turn);
         setGameId(data._id);
+        console.log("New game started", data);
       } catch (error) {
         console.error("Failed to fetch the game data:", error);
       }
@@ -34,6 +35,7 @@ const ChessBoard = () => {
 
   const sendMoveToBackend = async (startRow, startCol, endRow, endCol) => {
     try {
+      console.log(`Sending move to backend: ${startRow}, ${startCol} -> ${endRow}, ${endCol}`);
       const response = await fetch(`http://localhost:5001/api/game/move/${gameId}`, {
         method: 'POST',
         headers: {
@@ -44,8 +46,12 @@ const ChessBoard = () => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log("Move response from backend", data);
         setBoard(data.board);
         setTurn(data.turn);
+        setWhiteTaken(data.whiteTaken);
+        setBlackTaken(data.blackTaken);
+        setWinner(data.winner);
       } else {
         const error = await response.json();
         alert(error.message);
@@ -218,11 +224,13 @@ const ChessBoard = () => {
     if (selectedPiece && !winner) {
       const { piece, startRow, startCol } = selectedPiece;
       if (isValidMove(piece, startRow, startCol, row, col, board) && !moveResultsInCheck(startRow, startCol, row, col)) {
+        console.log(`Moving piece: ${piece} from (${startRow}, ${startCol}) to (${row}, ${col})`);
         await sendMoveToBackend(startRow, startCol, row, col);
         setSelectedPiece(null);
         setHighlightedMoves([]);
       }
     } else if (board[row][col] && ((turn === 'white' && board[row][col].toUpperCase() === board[row][col]) || (turn === 'black' && board[row][col].toLowerCase() === board[row][col]))) {
+      console.log(`Selecting piece: ${board[row][col]} at (${row}, ${col})`);
       setSelectedPiece({ piece: board[row][col], startRow: row, startCol: col });
       setHighlightedMoves(getPossibleMoves(board[row][col], row, col));
     }
@@ -230,6 +238,7 @@ const ChessBoard = () => {
 
   const handleDragStart = (e, piece, row, col) => {
     if ((turn === 'white' && piece.toUpperCase() === piece) || (turn === 'black' && piece.toLowerCase() === piece)) {
+      console.log(`Dragging piece: ${piece} from (${row}, ${col})`);
       setSelectedPiece({ piece, startRow: row, startCol: col });
       setHighlightedMoves(getPossibleMoves(piece, row, col));
       e.dataTransfer.setDragImage(new Image(), 0, 0); // Disable default drag image

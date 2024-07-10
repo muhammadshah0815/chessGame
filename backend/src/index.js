@@ -7,7 +7,7 @@ const gameRoutes = require('./routes/gameRoutes');
 const app = express();
 const PORT = process.env.PORT || 5001;
 
-mongoose.connect('mongodb://localhost/chess', {
+mongoose.connect('mongodb://localhost:27017/chess', {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => {
