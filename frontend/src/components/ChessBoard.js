@@ -15,6 +15,15 @@ const ChessBoard = () => {
   const [blackTaken, setBlackTaken] = useState([]);
   const [winner, setWinner] = useState(null);
   const [gameId, setGameId] = useState(null);
+  const [kingMoved, setKingMoved] = useState({
+    white: false,
+    black: false
+  });
+  const [rookMoved, setRookMoved] = useState({
+    white: { queenside: false, kingside: false },
+    black: { queenside: false, kingside: false }
+  });
+  
 
   useEffect(() => {
     const fetchNewGame = async () => {
