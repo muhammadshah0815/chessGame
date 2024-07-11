@@ -23,7 +23,6 @@ const ChessBoard = () => {
     white: { queenside: false, kingside: false },
     black: { queenside: false, kingside: false }
   });
-  
 
   useEffect(() => {
     const fetchNewGame = async () => {
@@ -33,6 +32,8 @@ const ChessBoard = () => {
         setBoard(data.board);
         setTurn(data.turn);
         setGameId(data._id);
+        setKingMoved(data.kingMoved);
+        setRookMoved(data.rookMoved);
         console.log("New game started", data);
       } catch (error) {
         console.error("Failed to fetch the game data:", error);
@@ -61,6 +62,8 @@ const ChessBoard = () => {
         setWhiteTaken(data.whiteTaken);
         setBlackTaken(data.blackTaken);
         setWinner(data.winner);
+        setKingMoved(data.kingMoved);
+        setRookMoved(data.rookMoved);
       } else {
         const error = await response.json();
         alert(error.message);
@@ -100,16 +103,10 @@ const ChessBoard = () => {
           if (startRow === 6 && endRow === 4 && dx === 0 && boardState[endRow][endCol] === '' && boardState[endRow + 1][endCol] === '') { // First move two squares
             return true;
           }
-          if (startRow === 3 && endRow === 2 && Math.abs(startCol - endCol) === 1 && boardState[endRow][endCol] === '' && enPassant && enPassant.row === endRow && enPassant.col === endCol) { // En passant
-            return true;
-          }
           return (dy === -1 && dx === 0 && boardState[endRow][endCol] === '') || // Move forward
                  (dy === -1 && dx === 1 && boardState[endRow][endCol] !== ''); // Capture
         } else { // Black pawn
           if (startRow === 1 && endRow === 3 && dx === 0 && boardState[endRow][endCol] === '' && boardState[endRow - 1][endCol] === '') { // First move two squares
-            return true;
-          }
-          if (startRow === 4 && endRow === 5 && Math.abs(startCol - endCol) === 1 && boardState[endRow][endCol] === '' && enPassant && enPassant.row === endRow && enPassant.col === endCol) { // En passant
             return true;
           }
           return (dy === 1 && dx === 0 && boardState[endRow][endCol] === '') || // Move forward
