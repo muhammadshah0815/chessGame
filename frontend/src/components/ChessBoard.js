@@ -34,6 +34,9 @@ const ChessBoard = () => {
         setGameId(data._id);
         setKingMoved(data.kingMoved);
         setRookMoved(data.rookMoved);
+        setWhiteTaken(data.whiteTaken);
+        setBlackTaken(data.blackTaken);
+        setWinner(data.winner);
         console.log("New game started", data);
       } catch (error) {
         console.error("Failed to fetch the game data:", error);
