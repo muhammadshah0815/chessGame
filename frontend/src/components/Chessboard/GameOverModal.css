@@ -1,0 +1,21 @@
+.game-over-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-over-modal h2 {
+  margin-top: 20px;
+}
+
+.game-over-modal img {
+  width: 80px;
+  height: 80px;
+}
+
+.new-game-button {
+  margin-top: 20px;
+  padding: 10px 20px;
+  cursor: pointer;
+}

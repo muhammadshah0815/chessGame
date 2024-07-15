@@ -1,0 +1,24 @@
+.start-new-game-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.start-new-game-modal h2 {
+  margin-bottom: 20px;
+}
+
+.start-new-game-modal .game-id-form {
+  display: flex;
+  gap: 10px;
+}
+
+.start-new-game-modal input {
+  padding: 5px;
+}
+
+.start-new-game-modal .btn {
+  padding: 5px 10px;
+  cursor: pointer;
+}

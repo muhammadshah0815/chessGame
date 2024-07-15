@@ -1,0 +1,21 @@
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #333;
+    color: #fff;
+  }
+  
+  .logout-btn-wrapper {
+    display: flex;
+  }
+  
+  .logout-btn {
+    padding: 5px 10px;
+    cursor: pointer;
+    background-color: #f00;
+    border: none;
+    color: #fff;
+  }
+  
