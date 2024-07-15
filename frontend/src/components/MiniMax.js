@@ -1,1 +1,0 @@
-//placeholder for minimax algorithm - check previous minimax python pacman project you have done

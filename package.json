@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "axios": "^1.7.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.1",
+    "react-router-dom": "^6.24.1"
+  },
+  "name": "chessgame",
+  "version": "1.0.0",
+  "description": "## Table of Contents - [Introduction](#introduction) - [Features](#features) - [Installation](#installation) - [Usage](#usage) - [Project Structure](#project-structure) - [Game Rules and Logic](#game-rules-and-logic) - [To-Do List](#to-do-list)",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
